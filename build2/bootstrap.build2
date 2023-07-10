@@ -1,0 +1,7 @@
+project = soft-render
+
+using version
+using config
+using test
+using install
+using dist

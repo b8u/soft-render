@@ -1,0 +1,14 @@
+: 1
+name: soft-render
+version: 0.1.0-a.0.z
+summary: soft-render C++ executable
+license: other: proprietary ; Not free/open source.
+description-file: README.md
+url: https://example.org/soft-render
+email: ildar@L0074.dock
+#build-error-email: ildar@L0074.dock
+depends: * build2 >= 0.15.0
+depends: * bpkg >= 0.15.0
+depends: libopengl-meta ^1.0.0-
+depends: glm >= 0.9.9
+depends: fmt >= 10.0.0
