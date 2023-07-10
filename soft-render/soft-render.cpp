@@ -24,7 +24,10 @@ int main(int argc, char *argv[]) {
                                     .radius = 1.0f},
                                    {.color = mfb_color::green(),
                                     .position = glm::vec3(-2, 0, 4),
-                                    .radius = 1.0f}
+                                    .radius = 1.0f},
+                                   {.color = mfb_color::yello(),
+                                    .position = glm::vec3(0, -10, 5),
+                                    .radius = 9.5f}
 
   };
 

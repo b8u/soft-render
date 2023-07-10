@@ -63,6 +63,9 @@ struct mfb_color {
   static constexpr mfb_color blue() {
     return {.b = 0xff, .g = 0, .r = 0, .a = 0};
   }
+  static constexpr mfb_color yello() {
+    return {.b = 0, .g = 0xff, .r = 0xff, .a = 0};
+  }
 
   explicit operator uint32_t() const noexcept {
     return (((uint32_t)a) << 24) | (((uint32_t)b) << 16) |
