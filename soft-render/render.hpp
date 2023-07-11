@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <numeric>
+#include <variant>
 #include <vector>
 
 #include <iostream>
@@ -80,6 +81,19 @@ struct mfb_color {
   }
   friend bool operator<=>(const mfb_color &l,
                           const mfb_color &r) noexcept = default;
+
+  [[nodiscard]] glm::vec3 as_rgb_vec() const noexcept {
+    return glm::vec3(r, g, b) / 255.0f;
+  }
+
+  mfb_color &set(glm::vec3 rgb) noexcept {
+    rgb *= 255.0f;
+    b = rgb.b;
+    g = rgb.g;
+    r = rgb.r;
+
+    return *this;
+  }
 };
 
 struct sphere_t {
@@ -88,8 +102,26 @@ struct sphere_t {
   float radius = 1;
 };
 
+struct ambient_light_t {
+  float intensity = 0.0f;
+};
+
+struct directional_light_t {
+  float intensity = 0.0f;
+  glm::vec3 direction;
+};
+
+struct point_light_t {
+  float intensity = 0.0f;
+  glm::vec3 position;
+};
+
+using light_t =
+    std::variant<ambient_light_t, directional_light_t, point_light_t>;
+
 void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
              const viewport_size_t &viewport_size,
-             const std::vector<sphere_t> &objects);
+             const std::vector<sphere_t> &objects,
+             const std::vector<light_t> &lights);
 
 } // namespace soft_render

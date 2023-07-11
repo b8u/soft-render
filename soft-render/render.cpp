@@ -1,8 +1,41 @@
 #include "render.hpp"
+#include <fmt/core.h>
 #include <glm/glm.hpp>
 #include <tuple>
 
 namespace soft_render {
+
+/**
+ * @return intensity [0.0f, 1.0f] calculated by available light sources.
+ */
+float compute_lightning(glm::vec3 point, glm::vec3 normal,
+                        const std::vector<light_t> &lights) {
+  float intensity = 0.0f;
+  // light ray from the light point to the object!
+  auto calc = [](glm::vec3 normal, glm::vec3 light_ray,
+                 float intencity) -> float {
+    // In general, the intencity changes by cos(angle of the light).
+    // cos(two vectors) == dot product of two normalized vectors.
+    return intencity * glm::dot(normal, glm::normalize(light_ray));
+  };
+  for (const auto &light : lights) {
+    if (std::holds_alternative<ambient_light_t>(light)) {
+      // It's reflected light, so we don't care about phisics and assume that
+      // all objects emit a bit of light.
+      intensity += std::get<ambient_light_t>(light).intensity;
+    } else if (std::holds_alternative<directional_light_t>(light)) {
+      const auto &dl = std::get<directional_light_t>(light);
+      // Directional light goes always to one direction.
+      intensity += std::max(calc(normal, dl.direction, dl.intensity), 0.0f);
+    } else if (std::holds_alternative<point_light_t>(light)) {
+      const auto &pl = std::get<point_light_t>(light);
+      // Once again, the light goes from the light position to the object.
+      const glm::vec3 light_ray = pl.position - point;
+      intensity += std::max(calc(normal, light_ray, pl.intensity), 0.0f);
+    }
+  }
+  return std::min(intensity, 1.0f);
+}
 
 /**
  * @return the same point on a projection plane
@@ -66,6 +99,7 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
 [[nodiscard]] mfb_color trace_ray(glm::vec3 viewport_position, glm::vec3 ray,
                                   float t_min, float t_max,
                                   const std::vector<sphere_t> &objects,
+                                  const std::vector<light_t> &lights,
                                   mfb_color background_color = {}) {
 
   float closest_t = std::numeric_limits<float>::infinity();
@@ -89,12 +123,24 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
     return background_color;
   }
 
-  return closest_object->color;
+  const glm::vec3 point = viewport_position + ray * closest_t; // why plus???
+  const glm::vec3 normal = glm::normalize(point - closest_object->position);
+  mfb_color color = closest_object->color;
+  const float light = compute_lightning(point, normal, lights);
+  if (light < 0.003f) {
+    fmt::println("light is {}", light);
+  }
+  color.set(color.as_rgb_vec() * light);
+  if (color == mfb_color{.b = 0, .g = 0, .r = 0, .a = 0}) {
+    fmt::println("lightning: {}", light);
+  }
+  return color;
 }
 
 void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
              const viewport_size_t &viewport_size,
-             const std::vector<sphere_t> &objects) {
+             const std::vector<sphere_t> &objects,
+             const std::vector<light_t> &lights) {
   constexpr mfb_color color = {
       .b = 255,
       .g = 77,
@@ -118,7 +164,7 @@ void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
           canvas_to_viewport(canvas_position, canvas_size, viewport_size);
       const mfb_color color =
           trace_ray(viewport_size.position, ray, 1,
-                    std::numeric_limits<float>::infinity(), objects);
+                    std::numeric_limits<float>::infinity(), objects, lights);
       const ssize_t index = i + j * canvas_size.width.as_ssize();
       // std::cout << color << std::endl;
       buffer[index] = color;

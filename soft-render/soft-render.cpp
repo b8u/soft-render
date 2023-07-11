@@ -16,19 +16,26 @@ int main(int argc, char *argv[]) {
     return 0;
   auto buffer =
       std::vector<mfb_color>(window_width * window_height, mfb_color::red());
-  std::vector<sphere_t> objects = {{.color = mfb_color::red(),
-                                    .position = glm::vec3(0, -1, 3),
-                                    .radius = 1.0f},
-                                   {.color = mfb_color::blue(),
-                                    .position = glm::vec3(2, 0, 4),
-                                    .radius = 1.0f},
-                                   {.color = mfb_color::green(),
-                                    .position = glm::vec3(-2, 0, 4),
-                                    .radius = 1.0f},
-                                   {.color = mfb_color::yello(),
-                                    .position = glm::vec3(0, -10, 5),
-                                    .radius = 9.5f}
+  std::vector<sphere_t> objects = {
 
+      {.color = mfb_color::red(),
+       .position = glm::vec3(0, -1, 3),
+       .radius = 1.0f},
+      {.color = mfb_color::blue(),
+       .position = glm::vec3(2, 0, 4),
+       .radius = 1.0f},
+      {.color = mfb_color::green(),
+       .position = glm::vec3(-2, 0, 4),
+       .radius = 1.0f},
+      {.color = mfb_color::yello(),
+       .position = glm::vec3(0, -5001, 0),
+       .radius = 5000.0f}
+
+  };
+  std::vector<light_t> lights = {
+      ambient_light_t{.intensity = 0.2f},
+      point_light_t{.intensity = 0.6f, .position = {2.0f, 1.0f, 0.0f}},
+      directional_light_t{.intensity = 0.2f, .direction = {1.0f, 4.0f, 4.0f}},
   };
 
   viewport_size_t viewport;
@@ -43,7 +50,7 @@ int main(int argc, char *argv[]) {
     render1(buffer,
             {.width = pixel_coordinate_t(window_width),
              .height = pixel_coordinate_t(window_height)},
-            viewport, objects);
+            viewport, objects, lights);
 
     const mfb_update_state state =
         mfb_update(window, static_cast<void *>(buffer.data()));
