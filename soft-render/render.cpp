@@ -5,19 +5,48 @@
 
 namespace soft_render {
 
+// light ray from the light point to the object!
+float calculate_diffuse_light(glm::vec3 normal, glm::vec3 light_ray,
+                              float intencity) noexcept {
+  // In general, the intencity changes by cos(angle of the light).
+  // cos(two vectors) == dot product of two normalized vectors.
+  return intencity * glm::dot(normal, glm::normalize(light_ray));
+}
+
+/**
+ * @param point_to_camera - "view vector" from a point to a camera. previoulsy
+ * we traced the reversed vector.
+ *
+ * @return specular coefficient of additional intencity for the ray.
+ */
+float calculate_specular_light(glm::vec3 point_to_camera, glm::vec3 normal,
+                               glm::vec3 light_ray, float specular) {
+  if (specular <= -1.0f)
+    return 0.0f;
+  // The picture looks like V (but the light ray in our case goes from the
+  // object). The light ray reflects with the same angle for a normal. Light ray
+  // projection:
+  // * to normal = normal * <normal, light_ray>
+  // * to object = light_ray - normal * <normal, light_ray>
+  // reflected ray is a sum of those two rays.
+  const auto reflected_ray =
+      normal * glm::dot(normal, light_ray) * 2.0f - light_ray;
+  const float r_dot_v = dot(reflected_ray, point_to_camera);
+  if (r_dot_v > 0) {
+    return std::pow(r_dot_v / (length(reflected_ray) * length(point_to_camera)),
+                    specular);
+  }
+  // it's not reflected. do nothing with intencity.
+  return 0.0f;
+}
+
 /**
  * @return intensity [0.0f, 1.0f] calculated by available light sources.
  */
 float compute_lightning(glm::vec3 point, glm::vec3 normal,
-                        const std::vector<light_t> &lights) {
+                        const std::vector<light_t> &lights,
+                        glm::vec3 point_to_camera, float specular) {
   float intensity = 0.0f;
-  // light ray from the light point to the object!
-  auto calc = [](glm::vec3 normal, glm::vec3 light_ray,
-                 float intencity) -> float {
-    // In general, the intencity changes by cos(angle of the light).
-    // cos(two vectors) == dot product of two normalized vectors.
-    return intencity * glm::dot(normal, glm::normalize(light_ray));
-  };
   for (const auto &light : lights) {
     if (std::holds_alternative<ambient_light_t>(light)) {
       // It's reflected light, so we don't care about phisics and assume that
@@ -26,12 +55,20 @@ float compute_lightning(glm::vec3 point, glm::vec3 normal,
     } else if (std::holds_alternative<directional_light_t>(light)) {
       const auto &dl = std::get<directional_light_t>(light);
       // Directional light goes always to one direction.
-      intensity += std::max(calc(normal, dl.direction, dl.intensity), 0.0f);
+      intensity += std::max(
+          calculate_diffuse_light(normal, dl.direction, dl.intensity), 0.0f);
+      intensity +=
+          dl.intensity * calculate_specular_light(point_to_camera, normal,
+                                                  dl.direction, specular);
     } else if (std::holds_alternative<point_light_t>(light)) {
       const auto &pl = std::get<point_light_t>(light);
       // Once again, the light goes from the light position to the object.
       const glm::vec3 light_ray = pl.position - point;
-      intensity += std::max(calc(normal, light_ray, pl.intensity), 0.0f);
+      intensity += std::max(
+          calculate_diffuse_light(normal, light_ray, pl.intensity), 0.0f);
+      intensity +=
+          pl.intensity * calculate_specular_light(point_to_camera, normal,
+                                                  light_ray, specular);
     }
   }
   return std::min(intensity, 1.0f);
@@ -98,13 +135,12 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
  */
 [[nodiscard]] mfb_color trace_ray(glm::vec3 viewport_position, glm::vec3 ray,
                                   float t_min, float t_max,
-                                  const std::vector<sphere_t> &objects,
-                                  const std::vector<light_t> &lights,
+                                  const scene_t &scene,
                                   mfb_color background_color = {}) {
 
   float closest_t = std::numeric_limits<float>::infinity();
   const sphere_t *closest_object = nullptr;
-  for (const auto &object : objects) {
+  for (const auto &object : scene.objects) {
     const auto [t1, t2] = intersect_ray_sphere(viewport_position, ray, object);
     if (t1 <= t_max && t1 >= t_min && t1 < closest_t) {
       closest_object = &object;
@@ -126,7 +162,8 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
   const glm::vec3 point = viewport_position + ray * closest_t; // why plus???
   const glm::vec3 normal = glm::normalize(point - closest_object->position);
   mfb_color color = closest_object->color;
-  const float light = compute_lightning(point, normal, lights);
+  const float light = compute_lightning(point, normal, scene.lights,
+                                        ray * -1.0f, closest_object->specular);
   if (light < 0.003f) {
     fmt::println("light is {}", light);
   }
@@ -138,16 +175,7 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
 }
 
 void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
-             const viewport_size_t &viewport_size,
-             const std::vector<sphere_t> &objects,
-             const std::vector<light_t> &lights) {
-  constexpr mfb_color color = {
-      .b = 255,
-      .g = 77,
-      .r = 225,
-      .a = 0,
-  };
-
+             const viewport_size_t &viewport_size, const scene_t &scene) {
   /*
    * Canvas coordinates goes from left-top corner (x goes right, y goes down).
    * The projection plane has (0,0) in the center and y goes up.
@@ -164,7 +192,7 @@ void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
           canvas_to_viewport(canvas_position, canvas_size, viewport_size);
       const mfb_color color =
           trace_ray(viewport_size.position, ray, 1,
-                    std::numeric_limits<float>::infinity(), objects, lights);
+                    std::numeric_limits<float>::infinity(), scene);
       const ssize_t index = i + j * canvas_size.width.as_ssize();
       // std::cout << color << std::endl;
       buffer[index] = color;

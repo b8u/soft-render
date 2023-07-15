@@ -20,16 +20,20 @@ int main(int argc, char *argv[]) {
 
       {.color = mfb_color::red(),
        .position = glm::vec3(0, -1, 3),
-       .radius = 1.0f},
+       .radius = 1.0f,
+       .specular = 500.0f},
       {.color = mfb_color::blue(),
        .position = glm::vec3(2, 0, 4),
-       .radius = 1.0f},
+       .radius = 1.0f,
+       .specular = 500.0f},
       {.color = mfb_color::green(),
        .position = glm::vec3(-2, 0, 4),
-       .radius = 1.0f},
+       .radius = 1.0f,
+       .specular = 10.0f},
       {.color = mfb_color::yello(),
        .position = glm::vec3(0, -5001, 0),
-       .radius = 5000.0f}
+       .radius = 5000.0f,
+       .specular = 1000.0f}
 
   };
   std::vector<light_t> lights = {
@@ -37,6 +41,8 @@ int main(int argc, char *argv[]) {
       point_light_t{.intensity = 0.6f, .position = {2.0f, 1.0f, 0.0f}},
       directional_light_t{.intensity = 0.2f, .direction = {1.0f, 4.0f, 4.0f}},
   };
+
+  scene_t scene = {.lights = lights, .objects = objects};
 
   viewport_size_t viewport;
 
@@ -50,7 +56,7 @@ int main(int argc, char *argv[]) {
     render1(buffer,
             {.width = pixel_coordinate_t(window_width),
              .height = pixel_coordinate_t(window_height)},
-            viewport, objects, lights);
+            viewport, scene);
 
     const mfb_update_state state =
         mfb_update(window, static_cast<void *>(buffer.data()));
