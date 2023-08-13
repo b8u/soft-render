@@ -130,8 +130,9 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
 }
 
 /**
- * The raytraycer detects intersections with a spheres. It could be to close to
- * the camera (t_min) or to far from camers (t_max). We clip such intersections.
+ * The raytraycer detects intersections with a spheres. It could be too close to
+ * the camera (t_min) or too far from camers (t_max). We clip such
+ * intersections.
  */
 [[nodiscard]] mfb_color trace_ray(glm::vec3 viewport_position, glm::vec3 ray,
                                   float t_min, float t_max,
