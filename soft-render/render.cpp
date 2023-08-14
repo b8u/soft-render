@@ -174,6 +174,10 @@ closest_intersection(glm::vec3 origin, glm::vec3 ray, float t_min, float t_max,
   return {closest_object, closest_t};
 }
 
+glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
+  return normal * glm::dot(normal, ray) * 2.0f - ray;
+}
+
 /**
  * The raytraycer detects intersections with a spheres. It could be too close to
  * the camera (t_min) or too far from camers (t_max). We clip such
@@ -181,7 +185,7 @@ closest_intersection(glm::vec3 origin, glm::vec3 ray, float t_min, float t_max,
  */
 [[nodiscard]] mfb_color trace_ray(glm::vec3 viewport_position, glm::vec3 ray,
                                   float t_min, float t_max,
-                                  const scene_t &scene,
+                                  const scene_t &scene, int recursion_depth = 0,
                                   mfb_color background_color = {}) {
   auto [closest_object, closest_t] =
       closest_intersection(viewport_position, ray, t_min, t_max, scene);
@@ -192,17 +196,25 @@ closest_intersection(glm::vec3 origin, glm::vec3 ray, float t_min, float t_max,
 
   const glm::vec3 point = viewport_position + ray * closest_t; // why plus???
   const glm::vec3 normal = glm::normalize(point - closest_object->position);
-  mfb_color color = closest_object->color;
+  mfb_color local_color = closest_object->color;
   const float light = compute_lightning(point, normal, scene, ray * -1.0f,
                                         closest_object->specular);
-  if (light < 0.003f) {
-    fmt::println("light is {}", light);
+  local_color.set(local_color.as_rgb_vec() * light);
+
+  // If we hit the recursion limit or the object is not reflective, we'ra done
+  if (recursion_depth <= 0 or closest_object->reflective <= 0) {
+    return local_color;
   }
-  color.set(color.as_rgb_vec() * light);
-  if (color == mfb_color{.b = 0, .g = 0, .r = 0, .a = 0}) {
-    fmt::println("lightning: {}", light);
-  }
-  return color;
+
+  // Compute the reflected color
+  const glm::vec3 reflected_ray = reflect_ray(-ray, normal);
+  const mfb_color reflected_color = trace_ray(
+      point, reflected_ray, 0.001f, std::numeric_limits<float>::infinity(),
+      scene, recursion_depth - 1, background_color);
+
+  return mfb_color::from_vec3(
+      local_color.as_rgb_vec() * (1 - closest_object->reflective) +
+      reflected_color.as_rgb_vec() * closest_object->reflective);
 }
 
 void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
@@ -223,7 +235,7 @@ void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
           canvas_to_viewport(canvas_position, canvas_size, viewport_size);
       const mfb_color color =
           trace_ray(viewport_size.position, ray, 1,
-                    std::numeric_limits<float>::infinity(), scene);
+                    std::numeric_limits<float>::infinity(), scene, 3);
       const ssize_t index = i + j * canvas_size.width.as_ssize();
       // std::cout << color << std::endl;
       buffer[index] = color;

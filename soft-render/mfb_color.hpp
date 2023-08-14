@@ -52,5 +52,11 @@ struct mfb_color {
 
     return *this;
   }
+
+  static inline mfb_color from_vec3(glm::vec3 rgb) noexcept {
+    mfb_color color;
+    color.set(rgb);
+    return color;
+  }
 };
 } // namespace soft_render

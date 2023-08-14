@@ -14,6 +14,7 @@ struct sphere_t {
   glm::vec3 position;
   float radius = 1;
   float specular = -1.0f; // by default it's disabled
+  float reflective = 0.5f;
 };
 
 struct ambient_light_t {

@@ -21,19 +21,23 @@ int main(int argc, char *argv[]) {
       {.color = mfb_color::red(),
        .position = glm::vec3(0, -1, 3),
        .radius = 1.0f,
-       .specular = 500.0f},
+       .specular = 500.0f,
+       .reflective = 0.2f},
       {.color = mfb_color::blue(),
        .position = glm::vec3(2, 0, 4),
        .radius = 1.0f,
-       .specular = 500.0f},
+       .specular = 500.0f,
+       .reflective = 0.3f},
       {.color = mfb_color::green(),
        .position = glm::vec3(-2, 0, 4),
        .radius = 1.0f,
-       .specular = 10.0f},
+       .specular = 10.0f,
+       .reflective = 0.4f},
       {.color = mfb_color::yello(),
        .position = glm::vec3(0, -5001, 0),
        .radius = 5000.0f,
-       .specular = 1000.0f}
+       .specular = 1000.0f,
+       .reflective = 0.0f}
 
   };
   std::vector<light_t> lights = {
