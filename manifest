@@ -12,3 +12,5 @@ depends: * bpkg >= 0.15.0
 depends: libopengl-meta ^1.0.0-
 depends: glm >= 0.9.9
 depends: fmt >= 10.0.0
+depends: libboost-asio >= 1.81.0
+depends: libboost-thread >= 1.81.0

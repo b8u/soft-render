@@ -1,6 +1,9 @@
 #include "render.hpp"
+#include <boost/asio.hpp>
+#include <boost/thread/latch.hpp>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
+#include <mutex>
 #include <tuple>
 
 namespace soft_render {
@@ -175,7 +178,7 @@ closest_intersection(glm::vec3 origin, glm::vec3 ray, float t_min, float t_max,
 }
 
 glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
-  return normal * glm::dot(normal, ray) * 2.0f - ray;
+  return 2.0f * normal * glm::dot(normal, ray) - ray;
 }
 
 /**
@@ -212,34 +215,56 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
       point, reflected_ray, 0.001f, std::numeric_limits<float>::infinity(),
       scene, recursion_depth - 1, background_color);
 
+  if (reflected_color == background_color) {
+    return local_color;
+  }
+
   return mfb_color::from_vec3(
       local_color.as_rgb_vec() * (1 - closest_object->reflective) +
       reflected_color.as_rgb_vec() * closest_object->reflective);
 }
 
-void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
-             const viewport_size_t &viewport_size, const scene_t &scene) {
+renderer::renderer() : pool(16) {}
+
+void renderer::render1(std::vector<mfb_color> &buffer,
+                       const canvas_size_t &canvas_size,
+                       const viewport_size_t viewport_size,
+                       const scene_t &scene) {
+
+  boost::latch sync(canvas_size.height.as_size());
+
   /*
-   * Canvas coordinates goes from left-top corner (x goes right, y goes down).
-   * The projection plane has (0,0) in the center and y goes up.
+   * Canvas coordinates goes from left-top corner (x goes right, y goes
+   * down). The projection plane has (0,0) in the center and y goes up.
    */
-  for (ssize_t i = 0; i < canvas_size.width.as_ssize(); ++i) {
-    // x goes from negative to positive (left-right).
-    const auto x = i - canvas_size.width.as_ssize() / 2;
-    for (ssize_t j = 0; j < canvas_size.height.as_ssize(); ++j) {
-      // y goes from positive to negative (top-down).
-      const auto y = canvas_size.width.as_ssize() / 2 - j;
-      const auto canvas_position =
-          glm::vec2(static_cast<float>(x), static_cast<float>(y));
-      const auto ray =
-          canvas_to_viewport(canvas_position, canvas_size, viewport_size);
-      const mfb_color color =
-          trace_ray(viewport_size.position, ray, 1,
-                    std::numeric_limits<float>::infinity(), scene, 3);
-      const ssize_t index = i + j * canvas_size.width.as_ssize();
-      // std::cout << color << std::endl;
-      buffer[index] = color;
-    }
+  for (ssize_t j = 0; j < canvas_size.height.as_ssize(); ++j) {
+    // y goes from positive to negative (top-down).
+    const auto y = canvas_size.width.as_ssize() / 2 - j;
+
+    boost::asio::post(
+        pool, [this, canvas_size, viewport_size, &scene, y, &buffer, j, &sync] {
+          std::vector<mfb_color> local_buffer(canvas_size.width.as_size());
+          for (ssize_t i = 0; i < canvas_size.width.as_ssize(); ++i) {
+            // x goes from negative to positive (left-right).
+            const auto x = i - canvas_size.width.as_ssize() / 2;
+            const auto canvas_position =
+                glm::vec2(static_cast<float>(x), static_cast<float>(y));
+            const auto ray =
+                canvas_to_viewport(canvas_position, canvas_size, viewport_size);
+            const mfb_color color =
+                trace_ray(viewport_size.position, ray, 1,
+                          std::numeric_limits<float>::infinity(), scene, 3);
+            local_buffer[i] = color;
+          }
+
+          std::lock_guard lock(buf_mutex);
+          std::copy(local_buffer.begin(), local_buffer.end(),
+                    std::next(buffer.begin(), j * canvas_size.width.as_size()));
+
+          sync.count_down();
+        });
   }
+
+  sync.wait();
 }
 } // namespace soft_render

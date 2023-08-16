@@ -3,12 +3,14 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <glm/vec3.hpp>
+#include <iostream>
+#include <mutex>
 #include <numeric>
 #include <variant>
 #include <vector>
 
-#include <iostream>
+#include <boost/asio.hpp>
+#include <glm/vec3.hpp>
 
 #include <soft-render/mfb_color.hpp>
 #include <soft-render/scene.hpp>
@@ -54,7 +56,16 @@ struct viewport_size_t : plane_t<float> {
   }
 };
 
-void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
-             const viewport_size_t &viewport_size, const scene_t &scene);
+class renderer {
+public:
+  renderer();
+
+  void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
+               const viewport_size_t viewport_size, const scene_t &scene);
+
+private:
+  boost::asio::thread_pool pool;
+  std::mutex buf_mutex;
+};
 
 } // namespace soft_render

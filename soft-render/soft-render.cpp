@@ -1,5 +1,8 @@
 #include <MiniFB_cpp.h>
 #include <cassert>
+#include <chrono>
+#include <fmt/chrono.h>
+#include <fmt/format.h>
 #include <iostream>
 #include <vector>
 
@@ -37,7 +40,7 @@ int main(int argc, char *argv[]) {
        .position = glm::vec3(0, -5001, 0),
        .radius = 5000.0f,
        .specular = 1000.0f,
-       .reflective = 0.0f}
+       .reflective = 0.5f}
 
   };
   std::vector<light_t> lights = {
@@ -56,21 +59,16 @@ int main(int argc, char *argv[]) {
       },
       window);
 
+  renderer main_renderer;
+
   do {
-    render1(buffer,
-            {.width = pixel_coordinate_t(window_width),
-             .height = pixel_coordinate_t(window_height)},
-            viewport, scene);
+    main_renderer.render1(buffer,
+                          {.width = pixel_coordinate_t(window_width),
+                           .height = pixel_coordinate_t(window_height)},
+                          viewport, scene);
 
     const mfb_update_state state =
         mfb_update(window, static_cast<void *>(buffer.data()));
-    std::cout << "frame finished. "
-              << "is black: "
-              << (std::find(buffer.begin(), buffer.end(), mfb_color{}) ==
-                          buffer.end()
-                      ? "YES"
-                      : "NO")
-              << ", state = " << state << std::endl;
     if (state != STATE_OK) {
       window = nullptr;
       break;
