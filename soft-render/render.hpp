@@ -44,6 +44,7 @@ struct viewport_size_t : plane_t<float> {
   /// Distance from a viewport position to a projection plane
   float distance = 1;
   glm::vec3 position;
+  glm::vec3 rotation; // I know it's not the right way to do that.
 
   friend std::ostream &operator<<(std::ostream &os,
                                   const viewport_size_t &value) {

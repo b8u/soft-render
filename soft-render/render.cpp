@@ -250,7 +250,9 @@ void renderer::render1(std::vector<mfb_color> &buffer,
             const auto canvas_position =
                 glm::vec2(static_cast<float>(x), static_cast<float>(y));
             const auto ray =
-                canvas_to_viewport(canvas_position, canvas_size, viewport_size);
+                canvas_to_viewport(canvas_position, canvas_size, viewport_size)
+                // TODO: I know it's not right way to do that
+                + viewport_size.rotation;
             const mfb_color color =
                 trace_ray(viewport_size.position, ray, 1,
                           std::numeric_limits<float>::infinity(), scene, 3);
