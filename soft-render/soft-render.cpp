@@ -1,17 +1,20 @@
-#include <MiniFB_cpp.h>
 #include <cassert>
 #include <chrono>
-#include <fmt/chrono.h>
-#include <fmt/format.h>
 #include <iostream>
 #include <vector>
+
+#include <MiniFB_cpp.h>
+#include <fmt/chrono.h>
+#include <fmt/format.h>
+#include <glm/gtx/transform.hpp>
+#include <glm/trigonometric.hpp>
 
 #include "render.hpp"
 
 using namespace soft_render;
 
-static constexpr unsigned window_width = 1024;
-static constexpr unsigned window_height = 1024;
+static constexpr unsigned window_width = 320;
+static constexpr unsigned window_height = 320;
 
 struct movement_controller {
   bool forward{};
@@ -40,18 +43,31 @@ struct movement_controller {
 
   [[nodiscard]] glm::vec3 apply(glm::vec3 position) const noexcept {
     const glm::vec3 self = to_vec3();
-    fmt::println("moves: ({}, {}, {})", self.x, self.y, self.z);
+    // fmt::println("moves: ({}, {}, {})", self.x, self.y, self.z);
     position += self;
     return position;
   }
 
-  [[nodiscard]] glm::vec3 rotate(glm::vec3 vector) const noexcept {
-    vector.x += rotate_left ? -0.1f : 0.0f;
-    vector.x += rotate_right ? 0.1f : 0.0f;
-    vector.y += rotate_up ? 0.1f : 0.0f;
-    vector.y += rotate_down ? -0.1f : 0.0f;
+  [[nodiscard]] glm::mat4 rotate(glm::mat4 rmat) const noexcept {
+    // I don't like the logic in this function :/
+    if (rotate_left || rotate_right) {
+      glm::vec3 asix;
+      if (rotate_left)
+        asix.y = -1.0f;
+      else
+        asix.y = 1.0f;
+      rmat = glm::rotate(rmat, glm::radians(5.0f), asix);
+    }
 
-    return vector;
+    if (rotate_up || rotate_down) {
+      glm::vec3 asix;
+      if (rotate_up)
+        asix.x = -1.0f;
+      else
+        asix.x = 1.0f;
+      rmat = glm::rotate(rmat, glm::radians(5.0f), asix);
+    }
+    return rmat;
   }
 };
 
@@ -96,10 +112,12 @@ int main(int argc, char *argv[]) {
   movement_controller moves;
   viewport_size_t viewport;
   bool exit = false;
+  renderer main_renderer;
 
   mfb_set_keyboard_callback(
-      [&moves, &exit]([[maybe_unused]] mfb_window *window, mfb_key key,
-                      [[maybe_unused]] mfb_key_mod mod, bool is_pressed) {
+      [&moves, &exit,
+       &main_renderer]([[maybe_unused]] mfb_window *window, mfb_key key,
+                       [[maybe_unused]] mfb_key_mod mod, bool is_pressed) {
         switch (key) {
         case mfb_key::KB_KEY_W:
           moves.forward = is_pressed;
@@ -136,6 +154,10 @@ int main(int argc, char *argv[]) {
           exit = true;
           break;
 
+        case mfb_key::KB_KEY_F12:
+          main_renderer.enable_mt();
+          break;
+
         default:
           // nothing to handle
           break;
@@ -143,17 +165,28 @@ int main(int argc, char *argv[]) {
       },
       window);
 
-  renderer main_renderer;
-
+  auto start = std::chrono::steady_clock::now();
+  int frame_counter = 0;
   do {
-    fmt::println("moves: w: {}, a: {}, s: {}, d: {}", moves.forward, moves.left,
-                 moves.backward, moves.right);
+    // fmt::println("moves: w: {}, a: {}, s: {}, d: {}", moves.forward,
+    // moves.left, moves.backward, moves.right);
     viewport.position = moves.apply(viewport.position);
     viewport.rotation = moves.rotate(viewport.rotation);
     main_renderer.render1(buffer,
                           {.width = pixel_coordinate_t(window_width),
                            .height = pixel_coordinate_t(window_height)},
                           viewport, scene);
+    ++frame_counter;
+
+    std::chrono::duration<double> frame =
+        std::chrono::steady_clock::now() - start;
+
+    if (frame.count() >= 1.0) {
+      fmt::println("fps: {}",
+                   static_cast<double>(frame_counter) / frame.count());
+      start = std::chrono::steady_clock::now();
+      frame_counter = 0;
+    }
 
     const mfb_update_state state =
         mfb_update(window, static_cast<void *>(buffer.data()));

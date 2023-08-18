@@ -241,30 +241,46 @@ void renderer::render1(std::vector<mfb_color> &buffer,
     // y goes from positive to negative (top-down).
     const auto y = canvas_size.width.as_ssize() / 2 - j;
 
-    boost::asio::post(
-        pool, [this, canvas_size, viewport_size, &scene, y, &buffer, j, &sync] {
-          std::vector<mfb_color> local_buffer(canvas_size.width.as_size());
-          for (ssize_t i = 0; i < canvas_size.width.as_ssize(); ++i) {
-            // x goes from negative to positive (left-right).
-            const auto x = i - canvas_size.width.as_ssize() / 2;
-            const auto canvas_position =
-                glm::vec2(static_cast<float>(x), static_cast<float>(y));
-            const auto ray =
-                canvas_to_viewport(canvas_position, canvas_size, viewport_size)
-                // TODO: I know it's not right way to do that
-                + viewport_size.rotation;
-            const mfb_color color =
-                trace_ray(viewport_size.position, ray, 1,
-                          std::numeric_limits<float>::infinity(), scene, 3);
-            local_buffer[i] = color;
-          }
+    const auto task = [this, canvas_size, viewport_size, &scene, y, &buffer, j,
+                       &sync] {
+      std::vector<mfb_color> local_buffer(canvas_size.width.as_size());
+      for (ssize_t i = 0; i < canvas_size.width.as_ssize(); ++i) {
+        // x goes from negative to positive (left-right).
+        const auto x = i - canvas_size.width.as_ssize() / 2;
+        const auto canvas_position =
+            glm::vec2(static_cast<float>(x), static_cast<float>(y));
+        glm::vec3 ray =
+            canvas_to_viewport(canvas_position, canvas_size, viewport_size);
+        const glm::vec3 debug_ray =
+            viewport_size.rotation * glm::vec4(ray, 1.0f);
 
-          std::lock_guard lock(buf_mutex);
-          std::copy(local_buffer.begin(), local_buffer.end(),
-                    std::next(buffer.begin(), j * canvas_size.width.as_size()));
+        // fmt::println("ray: [{}, {}, {}], debug_ray: [{}, {}, {}]", ray.x,
+        //              ray.y, ray.z, debug_ray.x, debug_ray.y,
+        //              debug_ray.z);
 
-          sync.count_down();
-        });
+        ray = debug_ray;
+
+        const mfb_color color =
+            trace_ray(viewport_size.position, ray, 1,
+                      std::numeric_limits<float>::infinity(), scene, 3);
+        local_buffer[i] = color;
+      }
+
+      // it should be useless here because we don't use the
+      // same elements in different threads.
+      std::lock_guard lock(buf_mutex);
+
+      std::copy(local_buffer.begin(), local_buffer.end(),
+                std::next(buffer.begin(), j * canvas_size.width.as_size()));
+
+      sync.count_down();
+    };
+
+    if (mt_disabled) {
+      task();
+    } else {
+      boost::asio::post(pool, task);
+    }
   }
 
   sync.wait();
