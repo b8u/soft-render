@@ -48,26 +48,18 @@ struct movement_controller {
     return position;
   }
 
-  [[nodiscard]] glm::mat4 rotate(glm::mat4 rmat) const noexcept {
-    // I don't like the logic in this function :/
-    if (rotate_left || rotate_right) {
-      glm::vec3 asix;
-      if (rotate_left)
-        asix.y = -1.0f;
-      else
-        asix.y = 1.0f;
-      rmat = glm::rotate(rmat, glm::radians(5.0f), asix);
-    }
+  [[nodiscard]] glm::vec2 rotate(glm::vec2 angles) const noexcept {
+    if (rotate_up)
+      angles.x -= 5.0f;
+    if (rotate_down)
+      angles.x += 5.0f;
 
-    if (rotate_up || rotate_down) {
-      glm::vec3 asix;
-      if (rotate_up)
-        asix.x = -1.0f;
-      else
-        asix.x = 1.0f;
-      rmat = glm::rotate(rmat, glm::radians(5.0f), asix);
-    }
-    return rmat;
+    if (rotate_left)
+      angles.y -= 5.0f;
+    if (rotate_right)
+      angles.y += 5.0f;
+
+    return angles;
   }
 };
 
@@ -171,7 +163,8 @@ int main(int argc, char *argv[]) {
     // fmt::println("moves: w: {}, a: {}, s: {}, d: {}", moves.forward,
     // moves.left, moves.backward, moves.right);
     viewport.position = moves.apply(viewport.position);
-    viewport.rotation = moves.rotate(viewport.rotation);
+    viewport.rotate(moves.rotate(viewport.rotation));
+
     main_renderer.render1(buffer,
                           {.width = pixel_coordinate_t(window_width),
                            .height = pixel_coordinate_t(window_height)},

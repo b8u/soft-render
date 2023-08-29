@@ -252,11 +252,10 @@ void renderer::render1(std::vector<mfb_color> &buffer,
         glm::vec3 ray =
             canvas_to_viewport(canvas_position, canvas_size, viewport_size);
         const glm::vec3 debug_ray =
-            viewport_size.rotation * glm::vec4(ray, 1.0f);
+            viewport_size.rotation_matrix * glm::vec4(ray, 1.0f);
 
         // fmt::println("ray: [{}, {}, {}], debug_ray: [{}, {}, {}]", ray.x,
-        //              ray.y, ray.z, debug_ray.x, debug_ray.y,
-        //              debug_ray.z);
+        // ray.y, ray.z, debug_ray.x, debug_ray.y, debug_ray.z);
 
         ray = debug_ray;
 
