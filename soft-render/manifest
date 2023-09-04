@@ -14,3 +14,5 @@ depends: glm >= 0.9.9
 depends: fmt >= 10.0.0
 depends: libboost-asio >= 1.81.0
 depends: libboost-thread >= 1.81.0
+
+benchmarks: google-benchmark >= 1.7.1

@@ -1,0 +1,12 @@
+libs =
+import libs += libminifb%lib{minifb}
+import libs =+ libopengl-meta%lib{opengl-gl}
+import libs =+ libX11%lib{X11}
+import libs =+ glm%lib{glm}
+import libs =+ fmt%lib{fmt}
+import libs =+ libboost-asio%lib{boost_asio}
+import libs =+ libboost-thread%lib{boost_thread}
+
+exe{soft-render}: {hxx ixx txx cxx}{**} $libs testscript
+
+cxx.poptions =+ "-I$out_root" "-I$src_root"
