@@ -1,0 +1,44 @@
+intf_libs = # Interface dependencies.
+impl_libs = # Implementation dependencies.
+import impl_libs =+ libcommon%lib{common}
+lib{raytracer}: {hxx ixx txx cxx}{** -version} hxx{version} $impl_libs $intf_libs
+
+hxx{version}: in{version} $src_root/manifest
+
+hxx{export}@./: cxx.importable = false
+
+# Build options.
+#
+cxx.poptions =+ "-I$out_root" "-I$src_root"
+
+{hbmia obja}{*}: cxx.poptions += -DLIBRAYTRACER_STATIC_BUILD
+{hbmis objs}{*}: cxx.poptions += -DLIBRAYTRACER_SHARED_BUILD
+
+# Export options.
+#
+lib{raytracer}:
+{
+  cxx.export.poptions = "-I$out_root" "-I$src_root"
+  cxx.export.libs = $intf_libs
+}
+
+liba{raytracer}: cxx.export.poptions += -DLIBRAYTRACER_STATIC
+libs{raytracer}: cxx.export.poptions += -DLIBRAYTRACER_SHARED
+
+# For pre-releases use the complete version to make sure they cannot be used
+# in place of another pre-release or the final version. See the version module
+# for details on the version.* variable values.
+#
+if $version.pre_release
+  lib{raytracer}: bin.lib.version = "-$version.project_id"
+else
+  lib{raytracer}: bin.lib.version = "-$version.major.$version.minor"
+
+# Install into the libraytracer/ subdirectory of, say, /usr/include/
+# recreating subdirectories.
+#
+{hxx ixx txx}{*}:
+{
+  install         = include/libraytracer/
+  install.subdirs = true
+}

@@ -1,0 +1,3 @@
+import libs = libraster%lib{raster}
+
+exe{driver}: {hxx ixx txx cxx}{**} $libs testscript{**}

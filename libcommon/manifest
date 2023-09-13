@@ -1,0 +1,15 @@
+: 1
+name: libcommon
+version: 0.1.0-a.0.z
+project: soft-render
+summary: common C++ library
+license: other: proprietary ; Not free/open source.
+description-file: README.md
+url: https://example.org/soft-render
+email: lily.coder@gmail.com
+#build-error-email: lily.coder@gmail.com
+depends: * build2 >= 0.15.0
+depends: * bpkg >= 0.15.0
+
+depends: glm >= 0.9.9
+depends: fmt >= 10.0.0

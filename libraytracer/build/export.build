@@ -1,0 +1,6 @@
+$out_root/
+{
+  include libraytracer/
+}
+
+export $out_root/libraytracer/$import.target

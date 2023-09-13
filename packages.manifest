@@ -1,2 +1,6 @@
 : 1
 location: soft-render/
+:
+location: libraytracer/
+:
+location: libcommon/
