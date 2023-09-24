@@ -4,6 +4,7 @@
 #include <fmt/core.h>
 #include <glm/glm.hpp>
 #include <mutex>
+#include <strong_type/strong_type.hpp>
 #include <tuple>
 
 namespace soft_render {
@@ -186,10 +187,10 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
  * the camera (t_min) or too far from camers (t_max). We clip such
  * intersections.
  */
-[[nodiscard]] mfb_color trace_ray(glm::vec3 viewport_position, glm::vec3 ray,
-                                  float t_min, float t_max,
-                                  const scene_t &scene, int recursion_depth = 0,
-                                  mfb_color background_color = {}) {
+[[nodiscard]] color_t trace_ray(glm::vec3 viewport_position, glm::vec3 ray,
+                                float t_min, float t_max, const scene_t &scene,
+                                int recursion_depth = 0,
+                                color_t background_color = color_t{}) {
   auto [closest_object, closest_t] =
       closest_intersection(viewport_position, ray, t_min, t_max, scene);
 
@@ -199,10 +200,10 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
 
   const glm::vec3 point = viewport_position + ray * closest_t; // why plus???
   const glm::vec3 normal = glm::normalize(point - closest_object->position);
-  mfb_color local_color = closest_object->color;
+  color_t local_color{closest_object->color.as_rgb_vec()};
   const float light = compute_lightning(point, normal, scene, ray * -1.0f,
                                         closest_object->specular);
-  local_color.set(local_color.as_rgb_vec() * light);
+  local_color = local_color * light;
 
   // If we hit the recursion limit or the object is not reflective, we'ra done
   if (recursion_depth <= 0 or closest_object->reflective <= 0) {
@@ -211,7 +212,7 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
 
   // Compute the reflected color
   const glm::vec3 reflected_ray = reflect_ray(-ray, normal);
-  const mfb_color reflected_color = trace_ray(
+  const color_t reflected_color = trace_ray(
       point, reflected_ray, 0.001f, std::numeric_limits<float>::infinity(),
       scene, recursion_depth - 1, background_color);
 
@@ -219,14 +220,13 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
     return local_color;
   }
 
-  return mfb_color::from_vec3(
-      local_color.as_rgb_vec() * (1 - closest_object->reflective) +
-      reflected_color.as_rgb_vec() * closest_object->reflective);
+  return local_color * (1 - closest_object->reflective) +
+         reflected_color * closest_object->reflective;
 }
 
 renderer::renderer() : pool(16) {}
 
-void renderer::render1(std::vector<mfb_color> &buffer,
+void renderer::render1(std::vector<color_t> &buffer,
                        const canvas_size_t &canvas_size,
                        const viewport_size_t viewport_size,
                        const scene_t &scene) {
@@ -243,7 +243,7 @@ void renderer::render1(std::vector<mfb_color> &buffer,
 
     const auto task = [this, canvas_size, viewport_size, &scene, y, &buffer, j,
                        &sync] {
-      std::vector<mfb_color> local_buffer(canvas_size.width.as_size());
+      std::vector<color_t> local_buffer(canvas_size.width.as_size());
       for (ssize_t i = 0; i < canvas_size.width.as_ssize(); ++i) {
         // x goes from negative to positive (left-right).
         const auto x = i - canvas_size.width.as_ssize() / 2;
@@ -259,7 +259,7 @@ void renderer::render1(std::vector<mfb_color> &buffer,
 
         ray = debug_ray;
 
-        const mfb_color color =
+        const color_t color =
             trace_ray(viewport_size.position, ray, 1,
                       std::numeric_limits<float>::infinity(), scene, 3);
         local_buffer[i] = color;

@@ -67,8 +67,8 @@ int main(int argc, char *argv[]) {
   mfb_window *window = mfb_open("my_app", window_width, window_height);
   if (!window)
     return 0;
-  auto buffer =
-      std::vector<mfb_color>(window_width * window_height, mfb_color::red());
+  auto buffer = std::vector<color_t>(window_width * window_height,
+                                     color_t{1.0f, 0.0f, 0.0f});
   std::vector<sphere_t> objects = {
 
       {.color = mfb_color::red(),
@@ -181,8 +181,19 @@ int main(int argc, char *argv[]) {
       frame_counter = 0;
     }
 
+    std::vector<uint32_t> mfb_buffer(buffer.size());
+    std::transform(buffer.begin(), buffer.end(), mfb_buffer.begin(),
+                   [](const color_t c) -> uint32_t {
+                     const uint32_t r = c.value_of().r * 255.0f;
+                     const uint32_t g = c.value_of().g * 255.0f;
+                     const uint32_t b = c.value_of().b * 255.0f;
+
+                     const uint32_t value = MFB_RGB(r, g, b);
+                     return value;
+                   });
+
     const mfb_update_state state =
-        mfb_update(window, static_cast<void *>(buffer.data()));
+        mfb_update(window, static_cast<void *>(mfb_buffer.data()));
     if (state != STATE_OK) {
       window = nullptr;
       break;

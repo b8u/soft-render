@@ -6,6 +6,7 @@ import libs =+ glm%lib{glm}
 import libs =+ fmt%lib{fmt}
 import libs =+ libboost-asio%lib{boost_asio}
 import libs =+ libboost-thread%lib{boost_thread}
+import libs =+ libcommon%lib{common}
 
 exe{soft-render}: {hxx ixx txx cxx}{**} $libs testscript
 

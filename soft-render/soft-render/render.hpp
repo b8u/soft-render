@@ -14,10 +14,13 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/vec3.hpp>
 
+#include <libcommon/color.hpp>
 #include <soft-render/mfb_color.hpp>
 #include <soft-render/scene.hpp>
 
 namespace soft_render {
+
+using color_t = common::color::float_rgb;
 
 class pixel_coordinate_t {
 public:
@@ -84,7 +87,7 @@ class renderer {
 public:
   renderer();
 
-  void render1(std::vector<mfb_color> &buffer, const canvas_size_t &canvas_size,
+  void render1(std::vector<color_t> &buffer, const canvas_size_t &canvas_size,
                const viewport_size_t viewport_size, const scene_t &scene);
 
   inline void disable_mt() noexcept { mt_disabled = true; }
