@@ -15,7 +15,6 @@
 #include <glm/vec3.hpp>
 
 #include <libcommon/color.hpp>
-#include <soft-render/mfb_color.hpp>
 #include <soft-render/scene.hpp>
 
 namespace soft_render {
@@ -48,7 +47,7 @@ struct viewport_size_t : plane_t<float> {
   viewport_size_t() : plane_t({1.0f, 1.0f}), distance(1.0f) {}
   /// Distance from a viewport position to a projection plane
   float distance = 1;
-  glm::vec3 position;
+  common::affine_space::point3 position;
   glm::vec2 rotation;
   glm::mat4 rotation_matrix = glm::mat4(1.0f);
 
@@ -76,8 +75,8 @@ struct viewport_size_t : plane_t<float> {
                                   const viewport_size_t &value) {
     os << value.width << "x" << value.height
        << ", distance = " << value.distance << ", position = ("
-       << value.position.x << ", " << value.position.y << ", "
-       << value.position.z << ")";
+       << value.position.value_of().x << ", " << value.position.value_of().y
+       << ", " << value.position.value_of().z << ")";
     // TODO: position
     return os;
   }

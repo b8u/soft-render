@@ -5,13 +5,14 @@
 
 #include <glm/glm.hpp>
 
-#include <soft-render/mfb_color.hpp>
+#include <libcommon/affine_space.hpp>
+#include <libcommon/color.hpp>
 
 namespace soft_render {
 
 struct sphere_t {
-  mfb_color color;
-  glm::vec3 position;
+  common::color::float_rgb color;
+  common::affine_space::point3 position;
   float radius = 1;
   float specular = -1.0f; // by default it's disabled
   float reflective = 0.5f;
@@ -23,12 +24,12 @@ struct ambient_light_t {
 
 struct directional_light_t {
   float intensity = 0.0f;
-  glm::vec3 direction;
+  common::affine_space::vec3 direction;
 };
 
 struct point_light_t {
   float intensity = 0.0f;
-  glm::vec3 position;
+  common::affine_space::point3 position;
 };
 
 using light_t =

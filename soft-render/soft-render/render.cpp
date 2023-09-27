@@ -3,22 +3,27 @@
 #include <boost/thread/latch.hpp>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
+#include <libcommon/affine_space.hpp>
 #include <mutex>
 #include <strong_type/strong_type.hpp>
 #include <tuple>
 
 namespace soft_render {
 
+namespace gx = common::affine_space;
+using gx::point3;
+using gx::vec3;
+
 [[nodiscard]] std::pair<const sphere_t *, float>
-closest_intersection(glm::vec3 origin, glm::vec3 ray, float t_min, float t_max,
+closest_intersection(point3 origin, vec3 ray, float t_min, float t_max,
                      const scene_t &scene);
 
 // light ray from the light point to the object!
-float calculate_diffuse_light(glm::vec3 normal, glm::vec3 light_ray,
+float calculate_diffuse_light(vec3 normal, vec3 light_ray,
                               float intencity) noexcept {
   // In general, the intencity changes by cos(angle of the light).
   // cos(two vectors) == dot product of two normalized vectors.
-  return intencity * glm::dot(normal, glm::normalize(light_ray));
+  return intencity * gx::dot(normal, gx::normalize(light_ray));
 }
 
 /**
@@ -27,8 +32,8 @@ float calculate_diffuse_light(glm::vec3 normal, glm::vec3 light_ray,
  *
  * @return specular coefficient of additional intencity for the ray.
  */
-float calculate_specular_light(glm::vec3 point_to_camera, glm::vec3 normal,
-                               glm::vec3 light_ray, float specular) {
+float calculate_specular_light(vec3 point_to_camera, vec3 normal,
+                               vec3 light_ray, float specular) {
   if (specular <= -1.0f)
     return 0.0f;
   // The picture looks like V (but the light ray in our case goes from the
@@ -37,12 +42,13 @@ float calculate_specular_light(glm::vec3 point_to_camera, glm::vec3 normal,
   // * to normal = normal * <normal, light_ray>
   // * to object = light_ray - normal * <normal, light_ray>
   // reflected ray is a sum of those two rays.
-  const auto reflected_ray =
-      normal * glm::dot(normal, light_ray) * 2.0f - light_ray;
-  const float r_dot_v = dot(reflected_ray, point_to_camera);
+  const vec3 reflected_ray =
+      normal * gx::dot(normal, light_ray) * 2.0f - light_ray;
+  const float r_dot_v = gx::dot(reflected_ray, point_to_camera);
   if (r_dot_v > 0) {
-    return std::pow(r_dot_v / (length(reflected_ray) * length(point_to_camera)),
-                    specular);
+    return std::pow(
+        r_dot_v / (gx::length(reflected_ray) * gx::length(point_to_camera)),
+        specular);
   }
   // it's not reflected. do nothing with intencity.
   return 0.0f;
@@ -51,8 +57,8 @@ float calculate_specular_light(glm::vec3 point_to_camera, glm::vec3 normal,
 /**
  * @return intensity [0.0f, 1.0f] calculated by available light sources.
  */
-float compute_lightning(glm::vec3 point, glm::vec3 normal, const scene_t &scene,
-                        glm::vec3 point_to_camera, float specular) {
+float compute_lightning(point3 point, vec3 normal, const scene_t &scene,
+                        vec3 point_to_camera, float specular) {
   float intensity = 0.0f;
   for (const auto &light : scene.lights) {
     if (std::holds_alternative<ambient_light_t>(light)) {
@@ -61,17 +67,17 @@ float compute_lightning(glm::vec3 point, glm::vec3 normal, const scene_t &scene,
       intensity += std::get<ambient_light_t>(light).intensity;
     } else {
       const auto [light_ray, light_intensity, t_max] = std::visit(
-          [point](const auto &light) -> std::tuple<glm::vec3, float, float> {
+          [point](const auto &light) -> std::tuple<vec3, float, float> {
             using light_t = std::decay_t<decltype(light)>;
             if constexpr (std::is_same_v<light_t, directional_light_t>) {
               // Directional light goes always to one direction.
-              const glm::vec3 light_ray = light.direction;
+              const vec3 light_ray = light.direction;
               const float t_max = std::numeric_limits<float>::infinity();
               return {light_ray, light.intensity, t_max};
             } else if constexpr (std::is_same_v<light_t, point_light_t>) {
               // Once again, the light goes from the light position to the
               // object.
-              const glm::vec3 light_ray = light.position - point;
+              const vec3 light_ray = light.position - point;
               const float t_max = 1.0f;
               return {light_ray, light.intensity, t_max};
             } else {
@@ -128,7 +134,7 @@ canvas_to_viewport(glm::vec2 canvas, canvas_size_t canvas_size,
  * r^2 = 0
  */
 [[nodiscard]] std::tuple<float, float>
-intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
+intersect_ray_sphere(point3 viewport_position, vec3 ray,
                      const sphere_t &sphere) noexcept {
   // ray == D
   // a = <D, D>
@@ -136,13 +142,13 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
   // c = <CO, CO> - r^2
   // at^2 + bt + c = 0
   const float r = sphere.radius;
-  const glm::vec3 CO = viewport_position - sphere.position;
+  const vec3 CO = viewport_position - sphere.position;
 
-  const auto a = glm::dot(ray, ray);
-  const auto b = 2 * glm::dot(CO, ray);
-  const auto c = glm::dot(CO, CO) - r * r;
+  const float a = gx::dot(ray, ray);
+  const float b = 2 * gx::dot(CO, ray);
+  const float c = gx::dot(CO, CO) - r * r;
 
-  const auto discriminant = b * b - 4 * a * c;
+  const float discriminant = b * b - 4 * a * c;
   if (discriminant < 0) {
     return std::tuple(std::numeric_limits<float>::infinity(),
                       std::numeric_limits<float>::infinity());
@@ -157,7 +163,7 @@ intersect_ray_sphere(glm::vec3 viewport_position, glm::vec3 ray,
  * \param origin is a point from where the ray is going.
  */
 [[nodiscard]] std::pair<const sphere_t *, float>
-closest_intersection(glm::vec3 origin, glm::vec3 ray, float t_min, float t_max,
+closest_intersection(point3 origin, vec3 ray, float t_min, float t_max,
                      const scene_t &scene) {
   float closest_t = std::numeric_limits<float>::infinity();
   const sphere_t *closest_object = nullptr;
@@ -178,8 +184,8 @@ closest_intersection(glm::vec3 origin, glm::vec3 ray, float t_min, float t_max,
   return {closest_object, closest_t};
 }
 
-glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
-  return 2.0f * normal * glm::dot(normal, ray) - ray;
+vec3 reflect_ray(vec3 ray, vec3 normal) noexcept {
+  return 2.0f * normal * gx::dot(normal, ray) - ray;
 }
 
 /**
@@ -187,8 +193,8 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
  * the camera (t_min) or too far from camers (t_max). We clip such
  * intersections.
  */
-[[nodiscard]] color_t trace_ray(glm::vec3 viewport_position, glm::vec3 ray,
-                                float t_min, float t_max, const scene_t &scene,
+[[nodiscard]] color_t trace_ray(point3 viewport_position, vec3 ray, float t_min,
+                                float t_max, const scene_t &scene,
                                 int recursion_depth = 0,
                                 color_t background_color = color_t{}) {
   auto [closest_object, closest_t] =
@@ -198,12 +204,12 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
     return background_color;
   }
 
-  const glm::vec3 point = viewport_position + ray * closest_t; // why plus???
-  const glm::vec3 normal = glm::normalize(point - closest_object->position);
-  color_t local_color{closest_object->color.as_rgb_vec()};
-  const float light = compute_lightning(point, normal, scene, ray * -1.0f,
-                                        closest_object->specular);
-  local_color = local_color * light;
+  const point3 point = viewport_position + ray * closest_t; // why plus???
+  const vec3 normal = gx::normalize(point - closest_object->position);
+  color_t local_color = closest_object->color;
+  const float light =
+      compute_lightning(point, normal, scene, -ray, closest_object->specular);
+  local_color *= light;
 
   // If we hit the recursion limit or the object is not reflective, we'ra done
   if (recursion_depth <= 0 or closest_object->reflective <= 0) {
@@ -211,7 +217,7 @@ glm::vec3 reflect_ray(glm::vec3 ray, glm::vec3 normal) noexcept {
   }
 
   // Compute the reflected color
-  const glm::vec3 reflected_ray = reflect_ray(-ray, normal);
+  const vec3 reflected_ray = reflect_ray(-ray, normal);
   const color_t reflected_color = trace_ray(
       point, reflected_ray, 0.001f, std::numeric_limits<float>::infinity(),
       scene, recursion_depth - 1, background_color);
@@ -260,7 +266,7 @@ void renderer::render1(std::vector<color_t> &buffer,
         ray = debug_ray;
 
         const color_t color =
-            trace_ray(viewport_size.position, ray, 1,
+            trace_ray(viewport_size.position, vec3{ray}, 1,
                       std::numeric_limits<float>::infinity(), scene, 3);
         local_buffer[i] = color;
       }
