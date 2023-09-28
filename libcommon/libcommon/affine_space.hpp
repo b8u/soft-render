@@ -6,7 +6,7 @@
 #include <strong_type/arithmetic.hpp>
 #include <strong_type/scalable_with.hpp>
 
-namespace common::affine_space {
+namespace common {
 using vec3 =
     strong::type<glm::vec3, struct vec3_tag, strong::default_constructible,
                  strong::scalable_with<float>, strong::arithmetic>;
@@ -26,4 +26,4 @@ inline vec3 normalize(vec3 v) noexcept {
 
 inline float length(vec3 v) noexcept { return glm::length(v.value_of()); }
 
-} // namespace common::affine_space
+} // namespace common

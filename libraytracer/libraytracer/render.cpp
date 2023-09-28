@@ -8,11 +8,10 @@
 #include <strong_type/strong_type.hpp>
 #include <tuple>
 
-namespace soft_render {
+namespace raytracer {
 
-namespace gx = common::affine_space;
-using gx::point3;
-using gx::vec3;
+using common::point3;
+using common::vec3;
 
 [[nodiscard]] std::pair<const sphere_t *, float>
 closest_intersection(point3 origin, vec3 ray, float t_min, float t_max,
@@ -23,7 +22,7 @@ float calculate_diffuse_light(vec3 normal, vec3 light_ray,
                               float intencity) noexcept {
   // In general, the intencity changes by cos(angle of the light).
   // cos(two vectors) == dot product of two normalized vectors.
-  return intencity * gx::dot(normal, gx::normalize(light_ray));
+  return intencity * common::dot(normal, common::normalize(light_ray));
 }
 
 /**
@@ -43,12 +42,12 @@ float calculate_specular_light(vec3 point_to_camera, vec3 normal,
   // * to object = light_ray - normal * <normal, light_ray>
   // reflected ray is a sum of those two rays.
   const vec3 reflected_ray =
-      normal * gx::dot(normal, light_ray) * 2.0f - light_ray;
-  const float r_dot_v = gx::dot(reflected_ray, point_to_camera);
+      normal * common::dot(normal, light_ray) * 2.0f - light_ray;
+  const float r_dot_v = common::dot(reflected_ray, point_to_camera);
   if (r_dot_v > 0) {
-    return std::pow(
-        r_dot_v / (gx::length(reflected_ray) * gx::length(point_to_camera)),
-        specular);
+    return std::pow(r_dot_v / (common::length(reflected_ray) *
+                               common::length(point_to_camera)),
+                    specular);
   }
   // it's not reflected. do nothing with intencity.
   return 0.0f;
@@ -144,9 +143,9 @@ intersect_ray_sphere(point3 viewport_position, vec3 ray,
   const float r = sphere.radius;
   const vec3 CO = viewport_position - sphere.position;
 
-  const float a = gx::dot(ray, ray);
-  const float b = 2 * gx::dot(CO, ray);
-  const float c = gx::dot(CO, CO) - r * r;
+  const float a = common::dot(ray, ray);
+  const float b = 2 * common::dot(CO, ray);
+  const float c = common::dot(CO, CO) - r * r;
 
   const float discriminant = b * b - 4 * a * c;
   if (discriminant < 0) {
@@ -185,7 +184,7 @@ closest_intersection(point3 origin, vec3 ray, float t_min, float t_max,
 }
 
 vec3 reflect_ray(vec3 ray, vec3 normal) noexcept {
-  return 2.0f * normal * gx::dot(normal, ray) - ray;
+  return 2.0f * normal * common::dot(normal, ray) - ray;
 }
 
 /**
@@ -205,7 +204,7 @@ vec3 reflect_ray(vec3 ray, vec3 normal) noexcept {
   }
 
   const point3 point = viewport_position + ray * closest_t; // why plus???
-  const vec3 normal = gx::normalize(point - closest_object->position);
+  const vec3 normal = common::normalize(point - closest_object->position);
   color_t local_color = closest_object->color;
   const float light =
       compute_lightning(point, normal, scene, -ray, closest_object->specular);
@@ -290,4 +289,4 @@ void renderer::render1(std::vector<color_t> &buffer,
 
   sync.wait();
 }
-} // namespace soft_render
+} // namespace raytracer

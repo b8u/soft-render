@@ -8,11 +8,11 @@
 #include <libcommon/affine_space.hpp>
 #include <libcommon/color.hpp>
 
-namespace soft_render {
+namespace raytracer {
 
 struct sphere_t {
   common::color::float_rgb color;
-  common::affine_space::point3 position;
+  common::point3 position;
   float radius = 1;
   float specular = -1.0f; // by default it's disabled
   float reflective = 0.5f;
@@ -24,12 +24,12 @@ struct ambient_light_t {
 
 struct directional_light_t {
   float intensity = 0.0f;
-  common::affine_space::vec3 direction;
+  common::vec3 direction;
 };
 
 struct point_light_t {
   float intensity = 0.0f;
-  common::affine_space::point3 position;
+  common::point3 position;
 };
 
 using light_t =
@@ -42,4 +42,4 @@ struct scene_t {
   // camers (split screen).
 };
 
-} // namespace soft_render
+} // namespace raytracer

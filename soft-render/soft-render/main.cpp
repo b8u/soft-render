@@ -9,9 +9,10 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/trigonometric.hpp>
 
-#include "render.hpp"
+#include <libraytracer/render.hpp>
+#include <libraytracer/scene.hpp>
 
-using namespace soft_render;
+using namespace raytracer;
 
 static constexpr unsigned window_width = 320;
 static constexpr unsigned window_height = 320;
@@ -41,11 +42,10 @@ struct movement_controller {
     return x;
   }
 
-  [[nodiscard]] common::affine_space::point3
-  apply(common::affine_space::point3 position) const noexcept {
+  [[nodiscard]] common::point3 apply(common::point3 position) const noexcept {
     const glm::vec3 self = to_vec3();
     // fmt::println("moves: ({}, {}, {})", self.x, self.y, self.z);
-    position += common::affine_space::point3::difference{self};
+    position += common::point3::difference{self};
     return position;
   }
 
@@ -73,22 +73,22 @@ int main(int argc, char *argv[]) {
   std::vector<sphere_t> objects = {
 
       {.color = common::color::red,
-       .position = common::affine_space::point3{glm::vec3(0, -1, 3)},
+       .position = common::point3{glm::vec3(0, -1, 3)},
        .radius = 1.0f,
        .specular = 500.0f,
        .reflective = 0.2f},
       {.color = common::color::blue,
-       .position = common::affine_space::point3{glm::vec3(2, 0, 4)},
+       .position = common::point3{glm::vec3(2, 0, 4)},
        .radius = 1.0f,
        .specular = 500.0f,
        .reflective = 0.3f},
       {.color = common::color::green,
-       .position = common::affine_space::point3{glm::vec3(-2, 0, 4)},
+       .position = common::point3{glm::vec3(-2, 0, 4)},
        .radius = 1.0f,
        .specular = 10.0f,
        .reflective = 0.4f},
       {.color = common::color::yello,
-       .position = common::affine_space::point3{glm::vec3(0, -5001, 0)},
+       .position = common::point3{glm::vec3(0, -5001, 0)},
        .radius = 5000.0f,
        .specular = 1000.0f,
        .reflective = 0.5f}
@@ -97,10 +97,9 @@ int main(int argc, char *argv[]) {
   std::vector<light_t> lights = {
       ambient_light_t{.intensity = 0.2f},
       point_light_t{.intensity = 0.6f,
-                    .position = common::affine_space::point3{2.0f, 1.0f, 0.0f}},
+                    .position = common::point3{2.0f, 1.0f, 0.0f}},
       directional_light_t{.intensity = 0.2f,
-                          .direction =
-                              common::affine_space::vec3{1.0f, 4.0f, 4.0f}},
+                          .direction = common::vec3{1.0f, 4.0f, 4.0f}},
   };
 
   scene_t scene = {.lights = lights, .objects = objects};

@@ -15,9 +15,9 @@
 #include <glm/vec3.hpp>
 
 #include <libcommon/color.hpp>
-#include <soft-render/scene.hpp>
+#include <libraytracer/scene.hpp>
 
-namespace soft_render {
+namespace raytracer {
 
 using color_t = common::color::float_rgb;
 
@@ -47,7 +47,7 @@ struct viewport_size_t : plane_t<float> {
   viewport_size_t() : plane_t({1.0f, 1.0f}), distance(1.0f) {}
   /// Distance from a viewport position to a projection plane
   float distance = 1;
-  common::affine_space::point3 position;
+  common::point3 position;
   glm::vec2 rotation;
   glm::mat4 rotation_matrix = glm::mat4(1.0f);
 
@@ -99,4 +99,4 @@ private:
   bool mt_disabled = true;
 };
 
-} // namespace soft_render
+} // namespace raytracer
