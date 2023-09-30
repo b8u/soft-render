@@ -4,12 +4,9 @@ impl_libs = # Implementation dependencies.
 
 import intf_libs =+ glm%lib{glm}
 import intf_libs =+ fmt%lib{fmt}
+import intf_libs =+ strong_type%lib{strong_type}
 
-lib{common}: {hxx ixx txx cxx}{** -version} hxx{version} $impl_libs $intf_libs
-
-hxx{version}: in{version} $src_root/manifest
-
-hxx{export}@./: cxx.importable = false
+lib{common}: {hxx ixx txx cxx}{**} $impl_libs $intf_libs
 
 # Build options.
 #
